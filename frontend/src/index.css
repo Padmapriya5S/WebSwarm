@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .pulse-border {
+    animation: pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(59, 130, 246, 0.5); /* blue-500 */
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    border-color: rgba(59, 130, 246, 1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}

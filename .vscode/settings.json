@@ -1,0 +1,6 @@
+{
+  "sqlite.database": "backend/webswarm.db",
+  "files.associations": {
+    "webswarm.db": "sqlite"
+  }
+}
