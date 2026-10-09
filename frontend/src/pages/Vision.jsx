@@ -27,7 +27,7 @@ export default function Vision() {
           <Eye className="w-10 h-10 text-cyan-500" />
           Vision Comparison Engine
         </h1>
-        <p className="text-slate-500 mt-2 text-lg">Real-time layout shift and visual variance metrics computed directly during swarm execution.</p>
+        <p className="text-slate-500 mt-2 text-lg">Rapid layout-shift indicator from an optimized structural JPEG byte-size heuristic; this is not a pixel-level image diff.</p>
       </div>
 
       {loading ? (

@@ -24,8 +24,12 @@ const AGENT_COLORS = {
 
 export default function ActiveSwarms() {
   const location = useLocation();
-  const [logs, setLogs] = useState([]);
-  const [wsStatus, setWsStatus] = useState('connecting'); // connecting, connected, error, done
+  const [logs, setLogs] = useState(() => location.state?.testId ? [] : [{
+    time: new Date().toLocaleTimeString(),
+    agent: 'System',
+    msg: '[SYSTEM] No active test session found. Please start a test from the Dashboard.'
+  }]);
+  const [wsStatus, setWsStatus] = useState(() => location.state?.testId ? 'connecting' : 'error'); // connecting, connected, error, done
   const [agents, setAgents] = useState({
     Planner: 'Idle',
     Navigation: 'Idle',
@@ -41,6 +45,12 @@ export default function ActiveSwarms() {
   
   const logsEndRef = useRef(null);
   const wsRef = useRef(null);
+  const wsCleanupTimerRef = useRef(null);
+  const completedRef = useRef(false);
+
+  function addLog(agent, msg) {
+    setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), agent, msg }]);
+  }
 
   useEffect(() => {
     if (autoScroll) {
@@ -51,13 +61,29 @@ export default function ActiveSwarms() {
   useEffect(() => {
     const data = location.state;
     if (!data || !data.testId) {
-      setWsStatus('error');
-      addLog('System', '[SYSTEM] No active test session found. Please start a test from the Dashboard.');
       return;
+    }
+
+    // React StrictMode intentionally runs an extra setup/cleanup cycle in
+    // development. Defer socket closure one tick so that remount reuses the
+    // live connection instead of starting the same test twice.
+    if (wsRef.current && wsRef.current.readyState < WebSocket.CLOSING) {
+      if (wsCleanupTimerRef.current) {
+        window.clearTimeout(wsCleanupTimerRef.current);
+        wsCleanupTimerRef.current = null;
+      }
+      const existingWs = wsRef.current;
+      return () => {
+        wsCleanupTimerRef.current = window.setTimeout(() => {
+          existingWs.close();
+          if (wsRef.current === existingWs) wsRef.current = null;
+        }, 0);
+      };
     }
 
     const ws = new WebSocket(`ws://localhost:8000/api/v1/ws/live-testing/${data.testId}`);
     wsRef.current = ws;
+    completedRef.current = false;
 
     ws.onopen = () => {
       setWsStatus('connected');
@@ -78,26 +104,29 @@ export default function ActiveSwarms() {
       } else if (msg.type === 'screenshot') {
         setLatestScreenshot(msg.data);
       } else if (msg.type === 'finish') {
+        completedRef.current = true;
         setWsStatus('done');
       }
     };
 
     ws.onerror = () => {
+      if (completedRef.current) return;
       setWsStatus('error');
       addLog('System', '[SYSTEM] WebSocket Connection Error. Ensure backend is running.');
     };
 
     ws.onclose = () => {
-      if (wsStatus !== 'done') setWsStatus('error');
+      if (!completedRef.current) setWsStatus('error');
     };
 
-    return () => ws.close();
+    return () => {
+      wsCleanupTimerRef.current = window.setTimeout(() => {
+        ws.close();
+        if (wsRef.current === ws) wsRef.current = null;
+      }, 0);
+    };
     // eslint-disable-next-line
   }, [location]);
-
-  const addLog = (agent, msg) => {
-    setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), agent, msg }]);
-  };
 
   const getAgentColor = (status) => {
     if (status === 'Running') return 'bg-blue-100 text-blue-700 border-blue-300';

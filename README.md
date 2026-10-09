@@ -11,8 +11,8 @@ WebSwarm is built with a modern, high-performance architecture:
 
 - **Frontend:** React, Vite, Tailwind CSS (Glassmorphism UI), Recharts, Lucide Icons.
 - **Backend:** FastAPI (Python), WebSockets, SQLite.
-- **AI & Automation:** Google Gemini 2.5 Flash, LangGraph, Playwright.
-- **Resilience Engine:** Custom `GeminiClientManager` featuring automatic API key rotation (round-robin), `asyncio.Semaphore` concurrency throttling, and exponential backoff retry loops to completely bypass rate limits.
+- **AI & Automation:** Groq `openai/gpt-oss-20b`, LangGraph, Playwright.
+- **Resilience Engine:** `GroqClientManager` rotates across up to seventeen configured API keys per request and immediately on a failed attempt. Each agent node has a 20-second deadline and emits visible fallback telemetry when its LLM request fails or times out.
 
 ---
 
@@ -20,14 +20,14 @@ WebSwarm is built with a modern, high-performance architecture:
 
 - **🧠 LangGraph 5-Agent Swarm:** A coordinated team of distinct AI agents working autonomously:
   1. **Planner Agent:** Analyzes the objective and strategizes the test path.
-  2. **Navigation Agent:** Controls Playwright, scrapes links, and navigates.
-  3. **Functional Agent:** Dynamically interacts with forms, buttons, and DOM elements.
+  2. **Navigation Agent:** Uses an LLM-selected navigation action and executes it through Playwright, then audits discovered links and assets.
+  3. **Functional Agent:** Uses an LLM-selected click or form-fill action and executes it through Playwright before running structural checks.
   4. **Chaos Agent:** Injects extreme boundary tests, multi-click stress, and XSS payloads.
   5. **Validation Agent:** Acts as the Senior QA to evaluate the logs, confirm bugs, and assign severities.
-- **📺 Live Visual Test Streaming:** Watch the AI test your app in real-time. Playwright captures and streams Base64 JPEG DOM states over WebSockets directly into the frontend canvas.
+- **📺 Live Visual Test Streaming:** Watch the AI test your app in real-time. Playwright captures and streams Base64 JPEG screenshots and agent logs over WebSockets to the frontend.
 - **📊 Real-time Telemetry:** Granular monitoring of Token Usage, Model Confidence Scores, and Execution Time (ms) per agent.
 - **🐞 Smart Bug Tracker:** An interactive data table that logs every discovered vulnerability with severity levels (Critical, High, Medium, Low).
-- **👁️ Vision Diffs Engine:** Side-by-side snapshot comparison calculating pixel-level variance and layout shifts caused by AI interactions.
+- **👁️ Vision Diffs Engine:** Side-by-side snapshots with an optimized structural JPEG byte-size heuristic for rapid layout shift detection. This heuristic is not a pixel-level image diff.
 - **📈 Historical Regression Analytics:** Beautiful Recharts Area and Bar graphs showing bug regression trends and severity spikes over time across different target URLs.
 - **📄 Executive HTML Reports:** Generate and download gorgeous, print-ready HTML reports containing executive summaries, metrics, and deep-dive technical root-cause analyses written by the AI.
 
@@ -41,18 +41,22 @@ WebSwarm is built with a modern, high-performance architecture:
 - SQLite (pre-installed on most systems)
 
 ### 2. Configure Environment Keys
-Navigate to the `backend` directory and edit the `.env` file to include your Google Gemini API key(s). 
-*Note: WebSwarm supports a multi-key pool. If one key hits a rate limit, the system will automatically rotate to the next key to prevent crashes.*
+Navigate to the `backend` directory and edit the `.env` file to include your Groq API key(s). Get a key from [Groq Console](https://console.groq.com/keys).
+*Note: WebSwarm supports a multi-key pool. If one key hits a rate limit, the system will automatically rotate to the next key and use its bounded fallback behavior if all keys fail.*
 
 Create `backend/.env`:
 ```env
-# Single Key
-GEMINI_API_KEY="your_google_ai_studio_api_key_here"
+# Groq model
+GROQ_MODEL=openai/gpt-oss-20b
 
-# OR Multi-Key Pool (Highly Recommended for free tiers)
-GEMINI_API_KEY_1="key_one..."
-GEMINI_API_KEY_2="key_two..."
-GEMINI_API_KEY_3="key_three..."
+# Single Key
+GROQ_API_KEY="your_groq_api_key_here"
+
+# OR Numbered Multi-Key Pool (supports GROQ_API_KEY_1 through GROQ_API_KEY_17)
+GROQ_API_KEY_1="key_one..."
+GROQ_API_KEY_2="key_two..."
+GROQ_API_KEY_3="key_three..."
+GROQ_API_KEY_4="key_four..."
 ```
 
 ### 3. Automated Startup (Recommended)
@@ -99,3 +103,4 @@ If you are using Visual Studio Code, we have pre-configured workspace settings.
 1. Install the recommended extension (`alexcvzz.vscode-sqlite`).
 2. Open the Command Palette (`Ctrl+Shift+P`) and search for **"SQLite: Open Database"**.
 3. Select `backend/webswarm.db` to instantly browse `test_runs`, `bugs`, `users`, and `vision_diffs` directly in your editor!
+
